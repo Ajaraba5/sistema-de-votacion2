@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Administrador</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+    }
+
+    header {
+      background: #020617;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    button {
+      background: #2563eb;
+      border: none;
+      padding: 8px 14px;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .danger {
+      background: #dc2626;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: #111827;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #1e293b;
+      text-align: center;
+    }
+
+    th {
+      background: #020617;
+    }
+
+    canvas {
+      max-width: 400px;
+      margin: 20px auto;
+      display: block;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    input[type="password"] {
+      margin-bottom: 10px;
+      padding: 5px;
+      width: 90%;
+      border-radius: 5px;
+      border: 1px solid #333;
+    }
+
+    form button {
+      margin-top: 5px;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    ul li {
+      background: #111827;
+      margin-bottom: 5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    select {
+      padding: 4px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    #leaderStats {
+      margin-top: 20px;
+      background: #111827;
+      padding: 15px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Panel Administrador</h1>
+  <div>
+    <button onclick="exportExcel()">Exportar Excel</button>
+    <button class="danger" onclick="logout()">Cerrar sesión</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- IMPORTAR EXCEL -->
+  <div class="card">
+    <h3>Importar Excel</h3>
+    <form id="importForm">
+      <input type="file" name="file" accept=".xlsx" required />
+      <button type="submit">Importar Excel</button>
+    </form>
+  </div>
+
+  <!-- GESTIÓN DE LÍDERES -->
+  <div class="card">
+    <h3>Agregar Líder</h3>
+    <form id="leaderForm">
+      <input type="text" name="username" placeholder="Nombre de usuario" required />
+      <input type="password" name="password" placeholder="Contraseña" required />
+      <button type="submit">Agregar Líder</button>
+    </form>
+    <h4>Lista de líderes</h4>
+    <ul id="leadersList"></ul>
+    <button onclick="loadLeaders()">Refrescar líderes</button>
+  </div>
+
+  <!-- CARDS ESTADÍSTICAS -->
+  <div class="cards">
+    <div class="card">
+      <h3>Total votantes</h3>
+      <h2 id="total">0</h2>
+    </div>
+    <div class="card">
+      <h3>Votaron</h3>
+      <h2 id="voted">0</h2>
+    </div>
+    <div class="card">
+      <h3>No votaron</h3>
+      <h2 id="notVoted">0</h2>
+    </div>
+    <div class="card">
+      <h3>No llegaron</h3>
+      <h2 id="absent">0</h2>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+<h3 class="chart-title">Resultados Generales</h3>
+<canvas id="chartGeneral"></canvas>
+
+<h3 class="chart-title">Resultados Partido A</h3>
+<canvas id="chartA"></canvas>
+
+<h3 class="chart-title">Resultados Partido B</h3>
+<canvas id="chartB"></canvas>
+
+  <!-- BUSCADOR POR CÉDULA -->
+  <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+    <input type="text" id="searchCedula" placeholder="Ingrese cédula..." style="flex:1; padding:5px; border-radius:5px; border:1px solid #333;" />
+    <button onclick="searchVoter()">Buscar</button>
+    <button onclick="loadVoters()">Limpiar búsqueda</button>
+  </div>
+
+  <!-- TABLE LISTADO DE VOTANTES -->
+  <table>
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Cédula</th>
+        <th>Teléfono</th>
+        <th>Partido</th>
+        <th>Líder</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody id="votersTable"></tbody>
+  </table>
+
+  <!-- ESTADÍSTICAS Y VOTANTES POR LÍDER -->
+  <div id="leaderStats" style="display:none;">
+    <h3>Estadísticas del líder seleccionado</h3>
+    <p>Total votantes: <span id="leaderTotal">0</span></p>
+    <p>Votaron: <span id="leaderVoted">0</span></p>
+    <p>No votaron: <span id="leaderNotVoted">0</span></p>
+    <p>No llegaron: <span id="leaderAbsent">0</span></p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Cédula</th>
+          <th>Teléfono</th>
+          <th>Partido</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="leaderVotersTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  let leaders = [];
+  let chartGeneral, chartA, chartB;
+
+  // ===============================
+  // EXPORTAR EXCEL (CSV descargable)
+  // ===============================
+function exportExcel() {
+  fetch('/admin/export/excel')
+    .then(res => res.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'votantes.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(err => {
+      console.error('Error exportando Excel:', err);
+      alert('❌ No se pudo exportar el Excel');
+    });
+}
+
+  // ===============================
+  // CERRAR SESIÓN
+  // ===============================
+  function logout() {
+    window.location.href = '/auth/logout';
+  }
+
+  // ===============================
+  // CARGAR ESTADÍSTICAS GENERALES
+  // ===============================
+async function loadStats(party){
+  let url = '/admin/stats';
+  if(party) url += `?party=${party}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(!party){
+    document.getElementById('total').innerText = data.total;
+    document.getElementById('voted').innerText = data.voted;
+    document.getElementById('notVoted').innerText = data.notVoted;
+    document.getElementById('absent').innerText = data.absent;
+  }
+
+  const ctxId = party === 'A' ? 'chartA' : party === 'B' ? 'chartB' : 'chartGeneral';
+  const ctx = document.getElementById(ctxId);
+
+  let chartObj = ctxId === 'chartGeneral' ? chartGeneral : ctxId === 'chartA' ? chartA : chartB;
+  if(chartObj) chartObj.destroy();
+
+  const newChart = new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Votaron','No votaron','No llegaron'],
+      datasets:[{
+        data:[data.voted, data.notVoted, data.absent],
+        backgroundColor:['#22c55e','#facc15','#ef4444']
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#fff' }
+        }
+      }
+    }
+  });
+
+  if(ctxId === 'chartGeneral') chartGeneral = newChart;
+  if(ctxId === 'chartA') chartA = newChart;
+  if(ctxId === 'chartB') chartB = newChart;
+}
+
+  // ===============================
+  // CARGAR VOTANTES
+  // ===============================
+async function loadVoters() {
+  const res = await fetch('/admin/voters');
+  const voters = await res.json();
+
+  const tbody = document.getElementById('votersTable');
+  tbody.innerHTML = '';
+
+  voters.forEach(v => {
+    const tr = document.createElement('tr');
+    let leaderOptions = leaders.map(l =>
+      `<option value="${l.id}" ${v.leader == l.username ? 'selected' : ''}>${l.username}</option>`
+    ).join('');
+
+    tr.innerHTML = `
+      <td>${v.name}</td>
+      <td>${v.cedula}</td>
+      <td>${v.phone || '-'}</td>
+      <td>${v.party}</td>
+      <td>
+        <select onchange="assignLeader(${v.id}, this.value)">
+          <option value="">-- Sin líder --</option>
+          ${leaderOptions}
+        </select>
+      </td>
+      <td>${v.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function assignLeader(voterId, leaderId) {
+  await fetch('/admin/assign-voters', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ voter_ids: [voterId], leader_id: leaderId })
+  });
+  loadVoters();
+}
+
+// ===============================
+// BUSCAR VOTANTE POR CÉDULA
+// ===============================
+async function searchVoter() {
+  const cedula = document.getElementById('searchCedula').value.trim();
+  if(!cedula) return alert('Ingrese una cédula válida');
+
+  const res = await fetch(`/admin/voters/search?cedula=${encodeURIComponent(cedula)}`);
+  const voters = await res.json();
+
+  const tbody = document.getElementById('votersTable');
+  tbody.innerHTML = '';
+
+  if(voters.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6">No se encontró ningún votante</td></tr>';
+    return;
+  }
+
+  voters.forEach(v => {
+    const tr = document.createElement('tr');
+    let leaderOptions = leaders.map(l =>
+      `<option value="${l.id}" ${v.leader == l.username ? 'selected' : ''}>${l.username}</option>`
+    ).join('');
+
+    tr.innerHTML = `
+      <td>${v.name}</td>
+      <td>${v.cedula}</td>
+      <td>${v.phone || '-'}</td>
+      <td>${v.party}</td>
+      <td>
+        <select onchange="assignLeader(${v.id}, this.value)">
+          <option value="">-- Sin líder --</option>
+          ${leaderOptions}
+        </select>
+      </td>
+      <td>${v.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===============================
+// IMPORTAR EXCEL
+// ===============================
+const importForm = document.getElementById('importForm');
+importForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const formData = new FormData(importForm);
+  const res = await fetch('/admin/import', { method:'POST', body: formData });
+  const result = await res.json();
+
+  if(res.ok) {
+    alert(`✅ ${result.total} votantes importados`);
+    loadAllStats();
+    loadVoters();
+    importForm.reset();
+  } else {
+    alert('❌ Error importando Excel: '+(result.error||'Desconocido'));
+  }
+});
+
+// ===============================
+// CREAR LÍDER
+// ===============================
+const leaderForm = document.getElementById('leaderForm');
+leaderForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const formData = new FormData(leaderForm);
+  const data = { username: formData.get('username'), password: formData.get('password') };
+
+  const res = await fetch('/admin/leaders', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+  if(res.ok){
+    alert('✅ Líder creado correctamente');
+    loadLeaders();
+    leaderForm.reset();
+  } else {
+    alert('❌ Error creando líder: '+(result.error||'Desconocido'));
+  }
+});
+
+// ===============================
+// LISTAR LÍDERES
+// ===============================
+async function loadLeaders() {
+  const res = await fetch('/admin/leaders');
+  leaders = await res.json();
+
+  const ul = document.getElementById('leadersList');
+  ul.innerHTML = '';
+  leaders.forEach(l => {
+    const li = document.createElement('li');
+    li.innerText = `${l.username} (ID: ${l.id})`;
+    li.onclick = () => showLeaderStats(l.id);
+    ul.appendChild(li);
+  });
+
+  loadVoters();
+}
+
+// ===============================
+// MOSTRAR ESTADÍSTICAS Y VOTANTES DE UN LÍDER
+// ===============================
+async function showLeaderStats(leaderId) {
+  document.getElementById('leaderStats').style.display = 'block';
+
+  const resStats = await fetch(`/admin/leader/${leaderId}/stats`);
+  const stats = await resStats.json();
+
+  document.getElementById('leaderTotal').innerText = stats.total;
+  document.getElementById('leaderVoted').innerText = stats.voted;
+  document.getElementById('leaderNotVoted').innerText = stats.notVoted;
+  document.getElementById('leaderAbsent').innerText = stats.absent;
+
+  const resVoters = await fetch(`/admin/leader/${leaderId}/voters`);
+  const voters = await resVoters.json();
+
+  const tbody = document.getElementById('leaderVotersTable');
+  tbody.innerHTML = '';
+  voters.forEach(v => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${v.name}</td>
+      <td>${v.cedula}</td>
+      <td>${v.phone || '-'}</td>
+      <td>${v.party}</td>
+      <td>${v.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===============================
+// CARGAR TODAS LAS ESTADÍSTICAS
+// ===============================
+function loadAllStats() {
+  loadStats();
+  loadStats('A');
+  loadStats('B');
+}
+
+// ===============================
+// AUTOLOAD AL INICIO
+// ===============================
+window.onload = () => {
+  loadAllStats();
+  loadLeaders();
+};
+
+// ===============================
+// REFRESCO AUTOMÁTICO DE ESTADÍSTICAS
+// ===============================
+setInterval(() => {
+  loadAllStats();
+}, 5000);
+
+</script>
+</body>
+</html>

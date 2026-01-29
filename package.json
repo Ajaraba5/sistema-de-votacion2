@@ -1,0 +1,27 @@
+{
+  "name": "sistema-votacion",
+  "version": "1.0.0",
+  "description": "Sistema web de control de votos con roles, reportes y exportación a Excel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node db/seed.js"
+  },
+  "author": "Sistema de Votación",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.22.1",
+    "express-session": "^1.17.3",
+    "mongoose": "^9.1.5",
+    "multer": "^2.0.2",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}

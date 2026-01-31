@@ -86,6 +86,7 @@ app.use((err, req, res, next) => {
 // SERVER
 // ==========================
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`🚀 Sistema de votación corriendo en http://localhost:${PORT}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Sistema de votación corriendo en puerto ${PORT}`)
 })
+
